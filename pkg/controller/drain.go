@@ -670,7 +670,7 @@ func (o *DrainOptions) waitForDetach(volumeIDs []string, nodeName string, stopCh
 }
 
 func (o *DrainOptions) getVolIDsFromDriver(pvNames []string) ([]string, error) {
-	pvSpecs := []corev1.PersistentVolumeSpec{}
+	pvSpecs := []*corev1.PersistentVolumeSpec{}
 
 	for _, pvName := range pvNames {
 		try := 0
@@ -691,14 +691,12 @@ func (o *DrainOptions) getVolIDsFromDriver(pvNames []string) ([]string, error) {
 			}
 
 			// Found PV; append and exit
-			pvSpecs = append(pvSpecs, pv.Spec)
+			pvSpecs = append(pvSpecs, &pv.Spec)
 			break
 		}
 	}
 
-	//TODO: Add this method to enable the serialise eviction
-	//return o.Driver.GetVolNames(pvSpecs)
-	return nil, nil
+	return o.Driver.GetListOfVolumeIDsForExistingPVs(pvSpecs)
 }
 
 func (o *DrainOptions) evictPodInternal(pod *corev1.Pod, policyGroupVersion string, getPodFn func(namespace, name string) (*api.Pod, error), returnCh chan error, stopCh <-chan struct{}) {
