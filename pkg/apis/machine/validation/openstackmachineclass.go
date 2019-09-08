@@ -55,8 +55,8 @@ func validateOpenStackMachineClassSpec(spec *machine.OpenStackMachineClassSpec, 
 	if "" == spec.KeyName {
 		allErrs = append(allErrs, field.Required(fldPath.Child("keyName"), "KeyName is required"))
 	}
-	if "" == spec.NetworkID {
-		allErrs = append(allErrs, field.Required(fldPath.Child("networkID"), "NetworkID is required"))
+	if "" == spec.OpenStackMachineClassSpecNetworks.PublicName {
+		allErrs = append(allErrs, field.Required(fldPath.Child("networkID"), "network.publicName is required"))
 	}
 	if "" == spec.PodNetworkCidr {
 		allErrs = append(allErrs, field.Required(fldPath.Child("podNetworkCidr"), "PodNetworkCidr is required"))

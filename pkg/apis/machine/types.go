@@ -668,9 +668,14 @@ type OpenStackMachineClassSpec struct {
 	KeyName          string
 	SecurityGroups   []string
 	Tags             map[string]string
-	NetworkID        string
-	SecretRef        *corev1.SecretReference
-	PodNetworkCidr   string
+	OpenStackMachineClassSpecNetworks
+	SecretRef      *corev1.SecretReference
+	PodNetworkCidr string
+}
+
+type OpenStackMachineClassSpecNetworks struct {
+	PublicName  string
+	PrivateName string
 }
 
 /********************** AWSMachineClass APIs ***************/

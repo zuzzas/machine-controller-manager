@@ -730,16 +730,21 @@ type OpenStackMachineClassList struct {
 
 // OpenStackMachineClassSpec is the specification of a cluster.
 type OpenStackMachineClassSpec struct {
-	ImageName        string                  `json:"imageName"`
-	Region           string                  `json:"region"`
-	AvailabilityZone string                  `json:"availabilityZone"`
-	FlavorName       string                  `json:"flavorName"`
-	KeyName          string                  `json:"keyName"`
-	SecurityGroups   []string                `json:"securityGroups"`
-	Tags             map[string]string       `json:"tags,omitempty"`
-	NetworkID        string                  `json:"networkID"`
-	SecretRef        *corev1.SecretReference `json:"secretRef,omitempty"`
-	PodNetworkCidr   string                  `json:"podNetworkCidr"`
+	ImageName                         string            `json:"imageName"`
+	Region                            string            `json:"region"`
+	AvailabilityZone                  string            `json:"availabilityZone"`
+	FlavorName                        string            `json:"flavorName"`
+	KeyName                           string            `json:"keyName"`
+	SecurityGroups                    []string          `json:"securityGroups"`
+	Tags                              map[string]string `json:"tags,omitempty"`
+	OpenStackMachineClassSpecNetworks `json:"networks"`
+	SecretRef                         *corev1.SecretReference `json:"secretRef,omitempty"`
+	PodNetworkCidr                    string                  `json:"podNetworkCidr"`
+}
+
+type OpenStackMachineClassSpecNetworks struct {
+	PublicName  string `json:"publicName,omitempty"`
+	PrivateName string `json:"privateName"`
 }
 
 /********************** AWSMachineClass APIs ***************/
@@ -1273,14 +1278,14 @@ type PacketMachineClassList struct {
 
 // PacketMachineClassSpec is the specification of a cluster.
 type PacketMachineClassSpec struct {
-	Facility     []string           `json:"facility"`
-	MachineType  string             `json:"machineType"`
-	BillingCycle string             `json:"billingCycle"`
-	OS           string             `json:"OS"`
-	ProjectID    string             `json:"projectID"`
-	Tags         []string  `json:"tags,omitempty"`
+	Facility     []string `json:"facility"`
+	MachineType  string   `json:"machineType"`
+	BillingCycle string   `json:"billingCycle"`
+	OS           string   `json:"OS"`
+	ProjectID    string   `json:"projectID"`
+	Tags         []string `json:"tags,omitempty"`
 	SSHKeys      []string `json:"sshKeys,omitempty"`
-	UserData     string             `json:"userdata,omitempty"`
+	UserData     string   `json:"userdata,omitempty"`
 
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 }

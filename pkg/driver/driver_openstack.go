@@ -35,6 +35,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/gophercloud/utils/openstack/clientconfig"
@@ -60,7 +61,8 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 	flavorName := d.OpenStackMachineClass.Spec.FlavorName
 	keyName := d.OpenStackMachineClass.Spec.KeyName
 	imageName := d.OpenStackMachineClass.Spec.ImageName
-	networkID := d.OpenStackMachineClass.Spec.NetworkID
+	publicNetworkName := d.OpenStackMachineClass.Spec.OpenStackMachineClassSpecNetworks.PublicName
+	privateNetworkName := d.OpenStackMachineClass.Spec.OpenStackMachineClassSpecNetworks.PrivateName
 	securityGroups := d.OpenStackMachineClass.Spec.SecurityGroups
 	availabilityZone := d.OpenStackMachineClass.Spec.AvailabilityZone
 	metadata := d.OpenStackMachineClass.Spec.Tags
@@ -73,6 +75,18 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "nova"}).Inc()
 		return "", "", fmt.Errorf("failed to get image id for image name %s: %s", imageName, err)
 	}
+
+	publicNetworkUUID, err := d.resolveNetworkNameToUUID(client, publicNetworkName)
+	if err != nil {
+		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
+		return "", "", fmt.Errorf("failed to get uuid for public network name %s: %s", publicNetworkName, err)
+	}
+	privateNetworkUUID, err := d.resolveNetworkNameToUUID(client, privateNetworkName)
+	if err != nil {
+		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
+		return "", "", fmt.Errorf("failed to get uuid for private network name %s: %s", privateNetworkName, err)
+	}
+
 	metrics.APIRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "nova"}).Inc()
 
 	createOpts = &servers.CreateOpts{
@@ -80,7 +94,7 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		Name:             d.MachineName,
 		FlavorName:       flavorName,
 		ImageRef:         imageRef,
-		Networks:         []servers.Network{{UUID: networkID}},
+		Networks:         []servers.Network{{UUID: publicNetworkUUID}, {UUID: privateNetworkUUID}},
 		SecurityGroups:   securityGroups,
 		Metadata:         metadata,
 		UserData:         []byte(d.UserData),
@@ -112,25 +126,33 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		return "", "", fmt.Errorf("error waiting for the %q server status: %s", server.ID, err)
 	}
 
+	openStackNetworkUUIDForPods := func() string {
+		if len(privateNetworkUUID) > 0 {
+			return privateNetworkUUID
+		} else {
+			return publicNetworkUUID
+		}
+	}()
+
 	listOpts := &ports.ListOpts{
-		NetworkID: networkID,
+		NetworkID: openStackNetworkUUIDForPods,
 		DeviceID:  server.ID,
 	}
 
 	allPages, err := ports.List(nwClient, listOpts).AllPages()
 	if err != nil {
 		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
-		return "", "", fmt.Errorf("failed to get ports for network ID %s: %s", networkID, err)
+		return "", "", fmt.Errorf("failed to get ports for network ID %s: %s", openStackNetworkUUIDForPods, err)
 	}
 	metrics.APIRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
 
 	allPorts, err := ports.ExtractPorts(allPages)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to extract ports for network ID %s: %s", networkID, err)
+		return "", "", fmt.Errorf("failed to extract ports for network ID %s: %s", openStackNetworkUUIDForPods, err)
 	}
 
 	if len(allPorts) == 0 {
-		return "", "", fmt.Errorf("got an empty port list for network ID %s and server ID %s", networkID, server.ID)
+		return "", "", fmt.Errorf("got an empty port list for network ID %s and server ID %s", openStackNetworkUUIDForPods, server.ID)
 	}
 
 	port, err := ports.Update(nwClient, allPorts[0].ID, ports.UpdateOpts{
@@ -424,6 +446,15 @@ func (d *OpenStackDriver) GetVolNames(specs []corev1.PersistentVolumeSpec) ([]st
 		names = append(names, name)
 	}
 	return names, nil
+}
+
+func (d *OpenStackDriver) resolveNetworkNameToUUID(client *gophercloud.ServiceClient, networkName string) (string, error) {
+	uuid, err := networks.IDFromName(client, networkName)
+	if err != nil {
+		return "", err
+	}
+
+	return uuid, err
 }
 
 func waitForStatus(c *gophercloud.ServiceClient, id string, pending []string, target []string, secs int) error {
