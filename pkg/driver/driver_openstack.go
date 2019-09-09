@@ -63,7 +63,7 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 	imageName := d.OpenStackMachineClass.Spec.ImageName
 	networkID := d.OpenStackMachineClass.Spec.NetworkID
 	publicNetworkName := d.OpenStackMachineClass.Spec.PublicNetworkName
-	privateNetworkName := d.OpenStackMachineClass.Spec.PrivateNetworkName
+	internalNetworkName := d.OpenStackMachineClass.Spec.InternalNetworkName
 	securityGroups := d.OpenStackMachineClass.Spec.SecurityGroups
 	availabilityZone := d.OpenStackMachineClass.Spec.AvailabilityZone
 	metadata := d.OpenStackMachineClass.Spec.Tags
@@ -77,6 +77,11 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		return "", "", fmt.Errorf("failed to get image id for image name %s: %s", imageName, err)
 	}
 
+	nwClient, err := d.createNeutronClient()
+	if err != nil {
+		return "", "", err
+	}
+
 	var serverNetworks = make([]servers.Network, 0, 10)
 	var podNetworkUUID string
 
@@ -84,7 +89,7 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		serverNetworks = append(serverNetworks, servers.Network{UUID: networkID})
 		podNetworkUUID = networkID
 	} else {
-		publicNetworkUUID, err := d.resolveNetworkNameToUUID(client, publicNetworkName)
+		publicNetworkUUID, err := d.resolveNetworkNameToUUID(nwClient, publicNetworkName)
 		if err != nil {
 			metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
 			return "", "", fmt.Errorf("failed to get uuid for public network name %s: %s", publicNetworkName, err)
@@ -92,15 +97,15 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		serverNetworks = append(serverNetworks, servers.Network{UUID: publicNetworkUUID})
 		podNetworkUUID = publicNetworkUUID
 
-		if len(privateNetworkName) > 0 {
-			privateNetworkUUID, err := d.resolveNetworkNameToUUID(client, privateNetworkName)
+		if len(internalNetworkName) > 0 {
+			internalNetworkUUID, err := d.resolveNetworkNameToUUID(nwClient, internalNetworkName)
 			if err != nil {
 				metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
-				return "", "", fmt.Errorf("failed to get uuid for private network name %s: %s", privateNetworkName, err)
+				return "", "", fmt.Errorf("failed to get uuid for internalNetworkName %s: %s", internalNetworkName, err)
 
 			}
-			serverNetworks = append(serverNetworks, servers.Network{UUID: privateNetworkUUID})
-			podNetworkUUID = privateNetworkUUID
+			serverNetworks = append(serverNetworks, servers.Network{UUID: internalNetworkUUID})
+			podNetworkUUID = internalNetworkUUID
 		}
 	}
 
@@ -132,11 +137,6 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 	metrics.APIRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "nova"}).Inc()
 
 	d.MachineID = d.encodeMachineID(d.OpenStackMachineClass.Spec.Region, server.ID)
-
-	nwClient, err := d.createNeutronClient()
-	if err != nil {
-		return "", "", err
-	}
 
 	err = waitForStatus(client, server.ID, []string{"BUILD"}, []string{"ACTIVE"}, 600)
 	if err != nil {

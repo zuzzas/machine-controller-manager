@@ -661,18 +661,18 @@ type OpenStackMachineClassList struct {
 
 // OpenStackMachineClassSpec is the specification of a cluster.
 type OpenStackMachineClassSpec struct {
-	ImageName          string
-	Region             string
-	AvailabilityZone   string
-	FlavorName         string
-	KeyName            string
-	SecurityGroups     []string
-	Tags               map[string]string
-	NetworkID          string
-	PublicNetworkName  string
-	PrivateNetworkName string
-	SecretRef          *corev1.SecretReference
-	PodNetworkCidr     string
+	ImageName           string
+	Region              string
+	AvailabilityZone    string
+	FlavorName          string
+	KeyName             string
+	SecurityGroups      []string
+	Tags                map[string]string
+	NetworkID           string
+	PublicNetworkName   string
+	InternalNetworkName string
+	SecretRef           *corev1.SecretReference
+	PodNetworkCidr      string
 }
 
 /********************** AWSMachineClass APIs ***************/

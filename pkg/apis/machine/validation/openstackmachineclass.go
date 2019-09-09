@@ -58,7 +58,7 @@ func validateOpenStackMachineClassSpec(spec *machine.OpenStackMachineClassSpec, 
 	if "" != spec.NetworkID && "" != spec.PublicNetworkName {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("publicNetworkName"), "publicNetworkName is forbidden in presence of networkID field"))
 	}
-	if "" != spec.NetworkID && "" != spec.PrivateNetworkName {
+	if "" != spec.NetworkID && "" != spec.InternalNetworkName {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("privateNetworkName"), "privateNetworkName is forbidden in presence of networkID field"))
 	}
 	if "" == spec.PublicNetworkName && "" != spec.NetworkID {
