@@ -56,13 +56,13 @@ func validateOpenStackMachineClassSpec(spec *machine.OpenStackMachineClassSpec, 
 		allErrs = append(allErrs, field.Required(fldPath.Child("keyName"), "KeyName is required"))
 	}
 	if "" != spec.NetworkID && "" != spec.PublicNetworkName {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("publicNetworkName"), "publicNetworkName is forbidden in presence of providerID field"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("publicNetworkName"), "publicNetworkName is forbidden in presence of networkID field"))
 	}
 	if "" != spec.NetworkID && "" != spec.PrivateNetworkName {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("privateNetworkName"), "privateNetworkName is forbidden in presence of providerID field"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("privateNetworkName"), "privateNetworkName is forbidden in presence of networkID field"))
 	}
-	if "" == spec.PublicNetworkName && "" == spec.NetworkID {
-		allErrs = append(allErrs, field.Required(fldPath.Child("publicNetworkName"), "publicNetworkName is required in absence of providerID field"))
+	if "" == spec.PublicNetworkName && "" != spec.NetworkID {
+		allErrs = append(allErrs, field.Required(fldPath.Child("publicNetworkName"), "publicNetworkName is required in absence of networkID field"))
 	}
 	if "" == spec.PodNetworkCidr {
 		allErrs = append(allErrs, field.Required(fldPath.Child("podNetworkCidr"), "PodNetworkCidr is required"))
