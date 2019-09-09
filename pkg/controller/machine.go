@@ -459,6 +459,10 @@ func (c *controller) machineDelete(machine *v1alpha1.Machine, driver driver.Driv
 		// If machine was created on the cloud provider
 		machineID, _ := driver.GetExisting()
 
+		if len(nodeName) == 0 {
+			goto Delete
+		}
+
 		if machine.Status.CurrentStatus.Phase != v1alpha1.MachineTerminating {
 			lastOperation := v1alpha1.LastOperation{
 				Description:    "Deleting machine from cloud provider",
@@ -591,6 +595,7 @@ func (c *controller) machineDelete(machine *v1alpha1.Machine, driver driver.Driv
 			return err
 		}
 
+	Delete:
 		// Remove finalizers from machine object
 		c.deleteMachineFinalizers(machine)
 
