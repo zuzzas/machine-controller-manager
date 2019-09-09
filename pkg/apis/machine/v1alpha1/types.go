@@ -730,21 +730,17 @@ type OpenStackMachineClassList struct {
 
 // OpenStackMachineClassSpec is the specification of a cluster.
 type OpenStackMachineClassSpec struct {
-	ImageName                         string            `json:"imageName"`
-	Region                            string            `json:"region"`
-	AvailabilityZone                  string            `json:"availabilityZone"`
-	FlavorName                        string            `json:"flavorName"`
-	KeyName                           string            `json:"keyName"`
-	SecurityGroups                    []string          `json:"securityGroups"`
-	Tags                              map[string]string `json:"tags,omitempty"`
-	OpenStackMachineClassSpecNetworks `json:"networks"`
-	SecretRef                         *corev1.SecretReference `json:"secretRef,omitempty"`
-	PodNetworkCidr                    string                  `json:"podNetworkCidr"`
-}
-
-type OpenStackMachineClassSpecNetworks struct {
-	PublicName  string `json:"publicName,omitempty"`
-	PrivateName string `json:"privateName"`
+	ImageName          string                  `json:"imageName"`
+	Region             string                  `json:"region"`
+	AvailabilityZone   string                  `json:"availabilityZone"`
+	FlavorName         string                  `json:"flavorName"`
+	KeyName            string                  `json:"keyName"`
+	SecurityGroups     []string                `json:"securityGroups"`
+	Tags               map[string]string       `json:"tags,omitempty"`
+	PublicNetworkName  string                  `json:"publicNetworkName"`
+	PrivateNetworkName string                  `json:"privateNetworkName,omitempty"`
+	SecretRef          *corev1.SecretReference `json:"secretRef,omitempty"`
+	PodNetworkCidr     string                  `json:"podNetworkCidr"`
 }
 
 /********************** AWSMachineClass APIs ***************/

@@ -2509,8 +2509,8 @@ func autoConvert_v1alpha1_OpenStackMachineClassSpec_To_machine_OpenStackMachineC
 	out.KeyName = in.KeyName
 	out.SecurityGroups = *(*[]string)(unsafe.Pointer(&in.SecurityGroups))
 	out.Tags = *(*map[string]string)(unsafe.Pointer(&in.Tags))
-	out.PublicName = in.PublicName
-	out.PrivateName = in.PrivateName
+	out.PublicNetworkName = in.PublicNetworkName
+	out.PrivateNetworkName = in.PrivateNetworkName
 	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.PodNetworkCidr = in.PodNetworkCidr
 	return nil
@@ -2529,8 +2529,8 @@ func autoConvert_machine_OpenStackMachineClassSpec_To_v1alpha1_OpenStackMachineC
 	out.KeyName = in.KeyName
 	out.SecurityGroups = *(*[]string)(unsafe.Pointer(&in.SecurityGroups))
 	out.Tags = *(*map[string]string)(unsafe.Pointer(&in.Tags))
-	out.PublicName = in.PublicName
-	out.PrivateName = in.PrivateName
+	out.PublicNetworkName = in.PublicNetworkName
+	out.PrivateNetworkName = in.PrivateNetworkName
 	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.PodNetworkCidr = in.PodNetworkCidr
 	return nil

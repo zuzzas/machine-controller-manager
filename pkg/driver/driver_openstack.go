@@ -61,8 +61,8 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 	flavorName := d.OpenStackMachineClass.Spec.FlavorName
 	keyName := d.OpenStackMachineClass.Spec.KeyName
 	imageName := d.OpenStackMachineClass.Spec.ImageName
-	publicNetworkName := d.OpenStackMachineClass.Spec.OpenStackMachineClassSpecNetworks.PublicName
-	privateNetworkName := d.OpenStackMachineClass.Spec.OpenStackMachineClassSpecNetworks.PrivateName
+	publicNetworkName := d.OpenStackMachineClass.Spec.PublicNetworkName
+	privateNetworkName := d.OpenStackMachineClass.Spec.PrivateNetworkName
 	securityGroups := d.OpenStackMachineClass.Spec.SecurityGroups
 	availabilityZone := d.OpenStackMachineClass.Spec.AvailabilityZone
 	metadata := d.OpenStackMachineClass.Spec.Tags
