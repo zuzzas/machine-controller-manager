@@ -61,6 +61,7 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 	flavorName := d.OpenStackMachineClass.Spec.FlavorName
 	keyName := d.OpenStackMachineClass.Spec.KeyName
 	imageName := d.OpenStackMachineClass.Spec.ImageName
+	networkID := d.OpenStackMachineClass.Spec.NetworkID
 	publicNetworkName := d.OpenStackMachineClass.Spec.PublicNetworkName
 	privateNetworkName := d.OpenStackMachineClass.Spec.PrivateNetworkName
 	securityGroups := d.OpenStackMachineClass.Spec.SecurityGroups
@@ -76,15 +77,31 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		return "", "", fmt.Errorf("failed to get image id for image name %s: %s", imageName, err)
 	}
 
-	publicNetworkUUID, err := d.resolveNetworkNameToUUID(client, publicNetworkName)
-	if err != nil {
-		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
-		return "", "", fmt.Errorf("failed to get uuid for public network name %s: %s", publicNetworkName, err)
-	}
-	privateNetworkUUID, err := d.resolveNetworkNameToUUID(client, privateNetworkName)
-	if err != nil {
-		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
-		return "", "", fmt.Errorf("failed to get uuid for private network name %s: %s", privateNetworkName, err)
+	var serverNetworks = make([]servers.Network, 0, 10)
+	var podNetworkUUID string
+
+	if len(networkID) > 0 {
+		serverNetworks = append(serverNetworks, servers.Network{UUID: networkID})
+		podNetworkUUID = networkID
+	} else {
+		publicNetworkUUID, err := d.resolveNetworkNameToUUID(client, publicNetworkName)
+		if err != nil {
+			metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
+			return "", "", fmt.Errorf("failed to get uuid for public network name %s: %s", publicNetworkName, err)
+		}
+		serverNetworks = append(serverNetworks, servers.Network{UUID: publicNetworkUUID})
+		podNetworkUUID = publicNetworkUUID
+
+		if len(privateNetworkName) > 0 {
+			privateNetworkUUID, err := d.resolveNetworkNameToUUID(client, privateNetworkName)
+			if err != nil {
+				metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
+				return "", "", fmt.Errorf("failed to get uuid for private network name %s: %s", privateNetworkName, err)
+
+			}
+			serverNetworks = append(serverNetworks, servers.Network{UUID: privateNetworkUUID})
+			podNetworkUUID = privateNetworkUUID
+		}
 	}
 
 	metrics.APIRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "nova"}).Inc()
@@ -94,7 +111,7 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		Name:             d.MachineName,
 		FlavorName:       flavorName,
 		ImageRef:         imageRef,
-		Networks:         []servers.Network{{UUID: publicNetworkUUID}, {UUID: privateNetworkUUID}},
+		Networks:         serverNetworks,
 		SecurityGroups:   securityGroups,
 		Metadata:         metadata,
 		UserData:         []byte(d.UserData),
@@ -126,33 +143,25 @@ func (d *OpenStackDriver) Create() (string, string, error) {
 		return "", "", fmt.Errorf("error waiting for the %q server status: %s", server.ID, err)
 	}
 
-	openStackNetworkUUIDForPods := func() string {
-		if len(privateNetworkUUID) > 0 {
-			return privateNetworkUUID
-		} else {
-			return publicNetworkUUID
-		}
-	}()
-
 	listOpts := &ports.ListOpts{
-		NetworkID: openStackNetworkUUIDForPods,
+		NetworkID: podNetworkUUID,
 		DeviceID:  server.ID,
 	}
 
 	allPages, err := ports.List(nwClient, listOpts).AllPages()
 	if err != nil {
 		metrics.APIFailedRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
-		return "", "", fmt.Errorf("failed to get ports for network ID %s: %s", openStackNetworkUUIDForPods, err)
+		return "", "", fmt.Errorf("failed to get ports for network ID %s: %s", podNetworkUUID, err)
 	}
 	metrics.APIRequestCount.With(prometheus.Labels{"provider": "openstack", "service": "neutron"}).Inc()
 
 	allPorts, err := ports.ExtractPorts(allPages)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to extract ports for network ID %s: %s", openStackNetworkUUIDForPods, err)
+		return "", "", fmt.Errorf("failed to extract ports for network ID %s: %s", podNetworkUUID, err)
 	}
 
 	if len(allPorts) == 0 {
-		return "", "", fmt.Errorf("got an empty port list for network ID %s and server ID %s", openStackNetworkUUIDForPods, server.ID)
+		return "", "", fmt.Errorf("got an empty port list for network ID %s and server ID %s", podNetworkUUID, server.ID)
 	}
 
 	port, err := ports.Update(nwClient, allPorts[0].ID, ports.UpdateOpts{

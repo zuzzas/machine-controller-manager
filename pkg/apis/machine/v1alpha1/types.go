@@ -737,6 +737,7 @@ type OpenStackMachineClassSpec struct {
 	KeyName            string                  `json:"keyName"`
 	SecurityGroups     []string                `json:"securityGroups"`
 	Tags               map[string]string       `json:"tags,omitempty"`
+	NetworkID          string                  `json:"networkID,omitempty"`
 	PublicNetworkName  string                  `json:"publicNetworkName"`
 	PrivateNetworkName string                  `json:"privateNetworkName,omitempty"`
 	SecretRef          *corev1.SecretReference `json:"secretRef,omitempty"`
